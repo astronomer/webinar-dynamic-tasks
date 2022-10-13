@@ -28,4 +28,3 @@ with DAG(
         return total
 
     get_sum(multiplied_vals)
-    
