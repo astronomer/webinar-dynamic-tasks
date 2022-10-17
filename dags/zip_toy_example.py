@@ -4,7 +4,7 @@ from airflow.decorators import task
 from datetime import datetime
 
 with DAG(
-    dag_id="3_zip_example",
+    dag_id="zip_toy_example",
     start_date=datetime(2022, 10, 1),
     schedule=None,
     catchup=False

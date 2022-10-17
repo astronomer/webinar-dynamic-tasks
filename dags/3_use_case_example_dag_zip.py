@@ -29,14 +29,14 @@ This DAG needs both, a Snowflake and Amazon S3 connection. The format of the
 task_logger = logging.getLogger('airflow.task')
 
 # define the buckets and table to be compared
-S3_BUCKET_1 = "your S3 bucket 1"
-S3_BUCKET_2 = "your S3 bucket 2"
-SNOWFLAKE_DB = "your snowflake database"
-SNOWFLAKE_SCHEMA = "your snowflake schema"
-SNOWLAKE_TABLE = "your snowflake table"
+S3_BUCKET_1 = "zip-bucket-one"
+S3_BUCKET_2 = "zip-bucket-two"
+SNOWFLAKE_DB = "SANDBOX"
+SNOWFLAKE_SCHEMA = "TAMARAFINGERLIN"
+SNOWLAKE_TABLE = "ZIP_EXAMPLE"
 
 with DAG(
-    dag_id="use_case_example_dag_zip",
+    dag_id="3_use_case_example_dag_zip",
     start_date=datetime(2022, 9, 1),
     schedule_interval=None,
     catchup=False
