@@ -4,6 +4,10 @@ from airflow.decorators import task
 from datetime import datetime
 from airflow.operators.empty import EmptyOperator
 
+"""
+This DAG contains static loops, _not_ mapped task instances.
+"""
+
 with DAG(
     dag_id="static_loops",
     start_date=datetime(2022, 10, 1),
