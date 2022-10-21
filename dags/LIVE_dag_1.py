@@ -30,9 +30,9 @@ with DAG(
         return f"{name} will {activity} on {day}!"
 
     make_sentences.expand(
-        x=["Lilou", "Woody", "Avery"], 
-        y=["sit on the laptop", "play fetch"], 
-        z=["Monday", "Tuesday"]
+        name=["Lilou", "Woody", "Avery"], 
+        activity=["sit on the laptop", "play fetch"], 
+        day=["Monday", "Tuesday"]
     )
 
     # Use .expand_kwargs to map over sets of keyword arguments
@@ -52,9 +52,9 @@ with DAG(
 
     sentences = make_sentences.expand_kwargs(
         [
-            {"x": "Lilou", "y": "sit on the laptop", "z": "Monday"},
-            {"x": "Woody", "y": "sit on the laptop", "z": "Tuesday"},
-            {"x": "Avery", "y": "play fetch", "z": "Monday"},
+            {"name": "Lilou", "activity": "sit on the laptop", "day": "Monday"},
+            {"name": "Woody", "activity": "sit on the laptop", "day": "Tuesday"},
+            {"name": "Avery", "activity": "play fetch", "day": "Monday"},
 
         ]
     )
@@ -70,6 +70,6 @@ with DAG(
     
     @task
     def print_the_first_sentence_with_emphasis(sentence):
-        return sentence + "!!!!!"
+        return sentence[0] + "!!!!!"
 
-    print_the_first_sentence_with_emphasis(sentences[0])
+    print_the_first_sentence_with_emphasis(sentences)
