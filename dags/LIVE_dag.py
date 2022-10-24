@@ -17,7 +17,7 @@ with DAG(
     catchup=False
 ):
 
-    # Use .expand to map over several kwargs to create a cross-product
+    ### 1) Use .expand to map over several kwargs to create a cross-product
     cross_product_calculations = PythonOperator.partial(
         task_id="cross_product_calculations"
     ).expand(
@@ -35,7 +35,7 @@ with DAG(
         day=["Monday", "Tuesday"]
     )
 
-    # Use .expand_kwargs to map over sets of keyword arguments
+    ### 2) Use .expand_kwargs to map over sets of keyword arguments
     @task 
     def sets_of_kwargs_sentences(name,activity,day):
         return f"{name} will {activity} on {day}!"
@@ -58,6 +58,21 @@ with DAG(
             {"python_callable": add_19, "op_args": [3]},
         ]
     )
+
+    # You can map over the input of upstream tasks!
+
+    @task
+    def return_kwargs(pet_names):
+        list_of_dicts = []
+        for pet_name in pet_names:
+            list_of_dicts.append(
+                {"name": pet_name, "activity": "eat", "day": "every day"}
+            )
+        return list_of_dicts
+
+    sets_of_kwargs_sentences.expand_kwargs(return_kwargs(["Avery", "Lilou", "Woody"]))
+
+
 
     # access specific XComs from dynamically mapped tasks
     print_the_result_of_equation_3 = BashOperator(
