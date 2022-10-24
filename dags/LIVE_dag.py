@@ -61,16 +61,22 @@ with DAG(
 
     # You can map over the input of upstream tasks!
 
+    pets = [("Avery", "dog"), ("Lilou", "cat"), ("Woody", "cat")]
+
     @task
-    def return_kwargs(pet_names):
+    def return_kwargs(pets):
         list_of_dicts = []
-        for pet_name in pet_names:
+        for pet in pets:
+            pet_name = pet[0]
+            animal = pet[1]
+
             list_of_dicts.append(
-                {"name": pet_name, "activity": "eat", "day": "every day"}
+                {"name": pet_name, "activity": f"eat {animal}-food", "day": "every day"}
             )
+            
         return list_of_dicts
 
-    sets_of_kwargs_sentences.expand_kwargs(return_kwargs(["Avery", "Lilou", "Woody"]))
+    sets_of_kwargs_sentences.expand_kwargs(return_kwargs(pets))
 
 
 
