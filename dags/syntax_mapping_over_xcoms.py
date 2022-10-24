@@ -89,3 +89,20 @@ with DAG(
 
     # set dependencies
     one_two_three_task_2 >> plus_10_task_both_traditional
+
+    # EXAMPLE 5: Mix zip and the cross-product behavior.
+    # Available in Airflow version 2.3+.
+    def add_num(x, y, word):
+        """Return a string containing the sum of x + y and a word."""
+        return f"{x+y}: {word}"
+
+    mix_cross_and_zip = PythonOperator.partial(
+        task_id="mix_cross_and_zip",
+        python_callable=add_num
+    ).expand(
+        op_args=list(zip([1, 2, 3], [10, 20, 30])),
+        op_kwargs=[{"word": "hi"}, {"word": "bye"}]
+    )
+
+    # results in 6 mapped instances printing:
+    # "11: hi", "22: hi", "33: hi", "11: bye", "22: bye", "33: bye"

@@ -56,7 +56,7 @@ with DAG(
     # when skipping mapped instances mind downstream trigger rules!
     downstream_hello = BashOperator(
         task_id="downstream_hello",
-        bash_command="echo hello",
+        bash_command="echo {{ ti.xcom_pull(task_ids=['mapped_printing_function'])[0] }}",
         trigger_rule="all_done"
     )
 
