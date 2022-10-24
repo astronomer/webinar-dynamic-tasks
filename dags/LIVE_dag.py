@@ -11,7 +11,7 @@ def subtract_23(x):
     return x - 23
 
 with DAG(
-    dag_id="LIVE_dag_1",
+    dag_id="LIVE_dag",
     start_date=datetime(2022, 10, 1),
     schedule=None,
     catchup=False
