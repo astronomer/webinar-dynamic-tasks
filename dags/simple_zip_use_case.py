@@ -9,7 +9,7 @@ S3_BUCKET_1 = "live-bucket-1"
 S3_BUCKET_2 = "live-bucket-2"
 
 with DAG(
-    dag_id="LIVE_dag_2",
+    dag_id="simple_zip_use_case",
     start_date=datetime(2022, 9, 1),
     schedule_interval=None,
     catchup=False
@@ -34,23 +34,9 @@ with DAG(
         filename_1 = filenames[0]
         filename_2 = filenames[1]
         if filename_1 == filename_2:
-            return "{filename_1} exists in both, {S3_BUCKET_1} and {S3_BUCKET_2}"
+            return f"{filename_1} exists in both, {S3_BUCKET_1} and {S3_BUCKET_2}"
         else:
             raise AirflowException("Filenames don't match!")
 
 
     file_parity_check.expand(filenames=zipped_files)
-
-
-    # Mix zip and the cross-product behavior.
-    def add_num(x, y, word):
-        """Return a string containing the sum of x + y and a word."""
-        return f"Sum: {x+y}, Work: {word}"
-
-    mix_cross_and_zip = PythonOperator.partial(
-        task_id="mix_cross_and_zip",
-        python_callable=add_num
-    ).expand(
-        op_args=list(zip([1, 2, 3], [10, 20, 30])),
-        op_kwargs=[{"word": "hi"}, {"word": "bye"}]
-    )

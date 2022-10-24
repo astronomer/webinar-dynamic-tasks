@@ -9,7 +9,7 @@ with DAG(
     schedule=None,
     catchup=False
 ):
-    # upstream task resturning a list or dictionary
+    # upstream task returning a list or dictionary
     @task
     def get_123():
         return [1, 2, 3]

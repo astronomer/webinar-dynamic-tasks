@@ -18,26 +18,39 @@ with DAG(
 ):
 
     # Use .expand to map over several kwargs to create a cross-product
-    cross_product = PythonOperator.partial(
-        task_id="cross_product"
+    cross_product_calculations = PythonOperator.partial(
+        task_id="cross_product_calculations"
     ).expand(
         python_callable=[add_19, subtract_23],
         op_args=[[1],[2],[3]]
     )
 
     @task 
-    def make_sentences(name,activity,day):
+    def cross_product_sentences(name,activity,day):
         return f"{name} will {activity} on {day}!"
 
-    make_sentences.expand(
+    cross_product_sentences.expand(
         name=["Lilou", "Woody", "Avery"], 
         activity=["sit on the laptop", "play fetch"], 
         day=["Monday", "Tuesday"]
     )
 
     # Use .expand_kwargs to map over sets of keyword arguments
-    sets_of_kwargs = PythonOperator.partial(
-        task_id="sets_of_kwargs"
+    @task 
+    def sets_of_kwargs_sentences(name,activity,day):
+        return f"{name} will {activity} on {day}!"
+
+    sentences = sets_of_kwargs_sentences.expand_kwargs(
+        [
+            {"name": "Lilou", "activity": "sit on the laptop", "day": "Monday"},
+            {"name": "Woody", "activity": "sit on the laptop", "day": "Tuesday"},
+            {"name": "Avery", "activity": "play fetch", "day": "Monday"}
+
+        ]
+    )
+
+    sets_of_kwargs_calculations = PythonOperator.partial(
+        task_id="sets_of_kwargs_calculations"
     ).expand_kwargs(
         [
             {"python_callable": add_19, "op_args": [1]},
@@ -46,30 +59,17 @@ with DAG(
         ]
     )
 
-    @task 
-    def make_sentences(name,activity,day):
-        return f"{name} will {activity} on {day}!"
-
-    sentences = make_sentences.expand_kwargs(
-        [
-            {"name": "Lilou", "activity": "sit on the laptop", "day": "Monday"},
-            {"name": "Woody", "activity": "sit on the laptop", "day": "Tuesday"},
-            {"name": "Avery", "activity": "play fetch", "day": "Monday"},
-
-        ]
-    )
-
     # access specific XComs from dynamically mapped tasks
     print_the_result_of_equation_3 = BashOperator(
         task_id="print_the_result_of_equation_3",
-        bash_command="echo {{ ti.xcom_pull(task_ids=['sets_of_kwargs'])[2] }}"
+        bash_command="echo {{ ti.xcom_pull(task_ids=['sets_of_kwargs_calculations'])[2] }}"
     )
 
-    sets_of_kwargs >> print_the_result_of_equation_3
+    sets_of_kwargs_calculations >> print_the_result_of_equation_3
 
     
     @task
-    def print_the_first_sentence_with_emphasis(sentence):
-        return sentence[0] + "!!!!!"
+    def print_the_first_sentence_with_emphasis(sentences):
+        return sentences[0] + "!!!!!"
 
     print_the_first_sentence_with_emphasis(sentences)
