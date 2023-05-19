@@ -1,15 +1,6 @@
-"""Example DAG showing the use of the .expand_kwargs method."""
-
-from airflow import DAG, XComArg
-from airflow.decorators import task
-from datetime import datetime
-from airflow.providers.amazon.aws.operators.s3 import (
-    S3CopyObjectOperator, S3ListOperator, S3DeleteObjectsOperator
-)
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-import logging
-
 """
+### Dynamically sort files from an S3 bucket based on their content with .expand_kwargs()
+
 This DAG shows an example implementation of sorting files in an S3 bucket into
 two different buckets based on logic involving the content of the files using
 dynamic task mapping with the expand_kwargs() method introduced in
@@ -28,51 +19,54 @@ The last task maps over one keyword argument using the expand() method
 introduced in Airflow 2.3.
 """
 
+from airflow.decorators import dag, task
+from pendulum import datetime
+from airflow.providers.amazon.aws.operators.s3 import (
+    S3CopyObjectOperator,
+    S3ListOperator,
+    S3DeleteObjectsOperator,
+)
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+import logging
+
 # get the Airflow task logger
-task_logger = logging.getLogger('airflow.task')
+task_logger = logging.getLogger("airflow.task")
 
 # define ingest and destination buckets
 S3_INGEST_BUCKET = "example-ingest-bucket"
 S3_INTEGER_BUCKET = "example-integer-bucket"
 S3_NOT_INTEGER_BUCKET = "example-not-integer-bucket"
 
-with DAG(
-    dag_id="use_case_example_dag_expand_kwargs",
-    start_date=datetime(2022, 9, 1),
-    schedule_interval=None,
-    catchup=False
-) as dag:
 
+@dag(start_date=datetime(2023, 5, 1), schedule_interval=None, catchup=False)
+def dynamic_s3_copy_sorting_file_contents():
     # fetch the file names from the ingest S3 bucket
     list_files_ingest_bucket = S3ListOperator(
         task_id="list_files_ingest_bucket",
         aws_conn_id="aws_conn",
-        bucket=S3_INGEST_BUCKET
+        bucket=S3_INGEST_BUCKET,
     )
 
     @task
     def read_keys_form_s3(source_key_list):
         """Fetch the contents from all files in the S3_INGEST_BUCKET."""
-        s3_hook = S3Hook(aws_conn_id='aws_conn')
+        s3_hook = S3Hook(aws_conn_id="aws_conn")
         content_list = []
         for key in source_key_list:
-            file_content = s3_hook.read_key(
-                key=key,
-                bucket_name=S3_INGEST_BUCKET
-            )
+            file_content = s3_hook.read_key(key=key, bucket_name=S3_INGEST_BUCKET)
             content_list.append(file_content)
 
         return content_list
 
     # read the contents from all files in the ingest bucket
-    content_list = read_keys_form_s3(XComArg(list_files_ingest_bucket))
+    content_list = read_keys_form_s3(list_files_ingest_bucket.output)
 
     @task
     def test_if_integer(content_list):
         """Tests the content of each file for whether it is an integer."""
         destination_list = []
         for file_content in content_list:
-            if isinstance(file_content, int):
+            if file_content.isdigit():
                 destination_list.append(S3_INTEGER_BUCKET)
             else:
                 destination_list.append(S3_NOT_INTEGER_BUCKET)
@@ -94,7 +88,7 @@ with DAG(
             list_of_source_dest_pairs.append(
                 {
                     "source_bucket_key": f"s3://{S3_INGEST_BUCKET}/{s}",
-                    "dest_bucket_key": f"s3://{d}/{s}"
+                    "dest_bucket_key": f"s3://{d}/{s}",
                 }
             )
 
@@ -103,23 +97,24 @@ with DAG(
     # generates the list of dicts to pass to the expand_kwargs argument
     # of the copy_files_S3 task
     source_dest_pairs = generate_source_dest_pairs(
-        XComArg(list_files_ingest_bucket),
-        dest_key_list
+        list_files_ingest_bucket.output, dest_key_list
     )
 
     # dynamically copy all files into either the S3_INTEGER_BUCKET or the
     # S3_NOT_INTEGER_BUCKET. One task per file.
     copy_files_S3 = S3CopyObjectOperator.partial(
-        task_id="copy_files_S3",
-        aws_conn_id="aws_conn"
+        task_id="copy_files_S3", aws_conn_id="aws_conn"
     ).expand_kwargs(source_dest_pairs)
 
     # dynamically delete the files in the ingest bucket. One task per file.
     delete_content_ingest_bucket = S3DeleteObjectsOperator.partial(
         task_id="delete_content_ingest_bucket",
         aws_conn_id="aws_conn",
-        bucket=S3_INGEST_BUCKET
-    ).expand(keys=XComArg(list_files_ingest_bucket))
+        bucket=S3_INGEST_BUCKET,
+    ).expand(keys=list_files_ingest_bucket.output)
 
     # set dependencies not set by the TaskFlowAPI
     copy_files_S3 >> delete_content_ingest_bucket
+
+
+dynamic_s3_copy_sorting_file_contents()

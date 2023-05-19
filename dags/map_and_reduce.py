@@ -1,14 +1,15 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.decorators import task
-from datetime import datetime
+"""
+### Dynamically map a task over an XCom output and reduce the results
 
-with DAG(
-    dag_id="1_basic_map_and_reduce",
-    start_date=datetime(2022, 10, 1),
-    schedule=None,
-    catchup=False
-):
+Simple DAG that shows basic dynamic task mapping with a reduce step.
+"""
+
+from airflow.decorators import dag, task
+from pendulum import datetime
+
+
+@dag(start_date=datetime(2023, 5, 1), schedule=None, catchup=False)
+def map_and_reduce():
     # upstream task returning a list or dictionary
     @task
     def get_123():
@@ -28,3 +29,6 @@ with DAG(
         return total
 
     get_sum(multiplied_vals)
+
+
+map_and_reduce()

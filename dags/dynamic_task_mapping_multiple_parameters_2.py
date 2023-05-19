@@ -1,36 +1,26 @@
-"""Toy example DAG containing different options for dynamic task mapping.
+"""
+### Dynamically map tasks over multiple parameters
 
-Some of these features require Airflow version 2.4+.
+Simple DAG that shows how to use dynamic task mapping with multiple parameters.
 """
 
-from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
-from airflow.decorators import task
-from datetime import datetime
+from airflow.decorators import dag, task
+from pendulum import datetime
 
-with DAG(
-    dag_id="syntax_mapping_multiple_parameters",
-    start_date=datetime(2022, 8, 1),
-    schedule_interval=None,
-    catchup=False
-) as dag:
 
+@dag(start_date=datetime(2023, 5, 1), schedule_interval=None, catchup=False)
+def dynamic_task_mapping_multiple_parameters_2():
     # EXAMPLE 1: mapping over 2 kwargs - cross product
     # Available in Airflow version 2.3+.
-    cross_product_example = BashOperator.partial(
-        task_id="cross_product_example"
-    ).expand(
+    BashOperator.partial(task_id="cross_product_example").expand(
         bash_command=[
             "echo $WORD",  # prints the env variable WORD
             "echo `expr length $WORD`",  # prints the number of letters in WORD
-            "echo ${WORD//e/X}"  # replaces each "e" in WORD with "X"
+            "echo ${WORD//e/X}",  # replaces each "e" in WORD with "X"
         ],
-        env=[
-            {"WORD": "hello"},
-            {"WORD": "tea"},
-            {"WORD": "goodbye"}
-        ]
+        env=[{"WORD": "hello"}, {"WORD": "tea"}, {"WORD": "goodbye"}],
     )
     # results in 3x3=9 mapped task instances printing:
     # hello, tea, goodbye, 5, 3, 7, hXllo, tXa, goodbyX
@@ -41,25 +31,14 @@ with DAG(
     def turn_into_XComArg():
         """Turn sets of keywordarguments into an XComArg."""
         return [
-            {
-                "bash_command": "echo $WORD",
-                "env": {"WORD": "hello"}
-            },
-            {
-                "bash_command": "echo `expr length $WORD`",
-                "env": {"WORD": "tea"}
-            },
-            {
-                "bash_command": "echo ${WORD//e/X}",
-                "env": {"WORD": "goodbye"}
-            }
+            {"bash_command": "echo $WORD", "env": {"WORD": "hello"}},
+            {"bash_command": "echo `expr length $WORD`", "env": {"WORD": "tea"}},
+            {"bash_command": "echo ${WORD//e/X}", "env": {"WORD": "goodbye"}},
         ]
 
     kwargs = turn_into_XComArg()
 
-    t2 = BashOperator.partial(
-        task_id="expand_kwargs_XComArg"
-    ).expand_kwargs(kwargs)
+    BashOperator.partial(task_id="expand_kwargs_XComArg").expand_kwargs(kwargs)
 
     # results in 3 mapped instances printing:
     # hello, 3, goodbyX
@@ -96,11 +75,10 @@ with DAG(
         a list, the contents of the zipped tuples are put into the function
         in an unpacked form.
         """
-        return x+y+z
+        return x + y + z
 
-    standard_add_numbers = PythonOperator.partial(
-        task_id="standard_add_numbers",
-        python_callable=add_numbers
+    PythonOperator.partial(
+        task_id="standard_add_numbers", python_callable=add_numbers
     ).expand(op_args=zipped_arguments)
 
     # results in 3 mapped instances printing:
@@ -111,13 +89,13 @@ with DAG(
         """Return a string containing the sum of x + y and a word."""
         return f"{x+y}: {word}"
 
-    mix_cross_and_zip = PythonOperator.partial(
-        task_id="mix_cross_and_zip",
-        python_callable=add_num
-    ).expand(
+    PythonOperator.partial(task_id="mix_cross_and_zip", python_callable=add_num).expand(
         op_args=list(zip([1, 2, 3], [10, 20, 30])),
-        op_kwargs=[{"word": "hi"}, {"word": "bye"}]
+        op_kwargs=[{"word": "hi"}, {"word": "bye"}],
     )
 
     # results in 6 mapped instances printing:
     # "11: hi", "22: hi", "33: hi", "11: bye", "22: bye", "33: bye"
+
+
+dynamic_task_mapping_multiple_parameters_2()

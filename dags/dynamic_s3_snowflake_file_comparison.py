@@ -1,17 +1,9 @@
-"""Example DAG showing the use of the .zip method of the XComArg object."""
-
-from airflow import DAG, XComArg
-from airflow.decorators import task
-from datetime import datetime
-from airflow.providers.amazon.aws.operators.s3 import S3ListOperator
-from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
-import re
-import logging
-
 """
+### Use the .zip method to combine XComArg/.output objects to compare files in S3 and Snowflake
+
 This DAG shows an example implementation of comparing data between two
-S3 buckets and a table in Snowflake using the new .zip() method of the
-XComArg object.
+S3 buckets and a table in Snowflake using the .zip() method of the
+XComArg/.output object.
 
 The DAG gathers the names of all .txt files in S3_BUCKET_1 and S3_BUCKET_2, as
 well as information from a DATE and a CUSTOMER column in Snowflake. The
@@ -25,8 +17,15 @@ This DAG needs both, a Snowflake and Amazon S3 connection. The format of the
 .txt file names is: YYYY_MM_DD_CUSTOMERNAME.txt.
 """
 
+from airflow.decorators import dag, task
+from pendulum import datetime
+from airflow.providers.amazon.aws.operators.s3 import S3ListOperator
+from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+import re
+import logging
+
 # get the Airflow task logger
-task_logger = logging.getLogger('airflow.task')
+task_logger = logging.getLogger("airflow.task")
 
 # define the buckets and table to be compared
 S3_BUCKET_1 = "zip-bucket-one"
@@ -35,23 +34,19 @@ SNOWFLAKE_DB = "SANDBOX"
 SNOWFLAKE_SCHEMA = "TAMARAFINGERLIN"
 SNOWLAKE_TABLE = "ZIP_EXAMPLE"
 
-with DAG(
-    dag_id="3_use_case_example_dag_zip",
-    start_date=datetime(2022, 9, 1),
-    schedule_interval=None,
-    catchup=False
-) as dag:
 
+@dag(
+    start_date=datetime(2023, 5, 1),
+    schedule_interval=None,
+    catchup=False,
+)
+def dynamic_s3_snowflake_file_comparison():
     list_files_in_S3_one = S3ListOperator(
-        task_id="list_files_in_S3_one",
-        aws_conn_id="aws_conn",
-        bucket=S3_BUCKET_1
+        task_id="list_files_in_S3_one", aws_conn_id="aws_conn", bucket=S3_BUCKET_1
     )
 
     list_files_in_S3_two = S3ListOperator(
-        task_id="list_files_in_S3_two",
-        aws_conn_id="aws_conn",
-        bucket=S3_BUCKET_2
+        task_id="list_files_in_S3_two", aws_conn_id="aws_conn", bucket=S3_BUCKET_2
     )
 
     query_snowflake = SnowflakeOperator(
@@ -61,7 +56,7 @@ with DAG(
             SELECT CAST(DATE AS TEXT) AS DATE, CUSTOMER AS CUSTOMER
             FROM {SNOWFLAKE_DB}.{SNOWFLAKE_SCHEMA}.{SNOWLAKE_TABLE}
             ORDER BY DATE ASC
-        """
+        """,
     )
 
     @task
@@ -81,8 +76,8 @@ with DAG(
         date_file_1_converted_format = date_file_1.replace("_", "-")
 
         if (
-            snowflake_entry['DATE'] == date_file_1_converted_format
-            and snowflake_entry['CUSTOMER'] == name_file_2
+            snowflake_entry["DATE"] == date_file_1_converted_format
+            and snowflake_entry["CUSTOMER"] == name_file_2
         ):
             task_logger.info(f"Matching entries on {date_file_1}")
         else:
@@ -93,13 +88,15 @@ with DAG(
             )
 
     compare_dates_logfiles.expand(
-        # call .zip() on the XComArg object to zip together several
-        # XComArgs
-        input_tuple=XComArg(list_files_in_S3_one).zip(
-            XComArg(list_files_in_S3_two),
-            XComArg(query_snowflake),
+        # call .zip() on the .output object to zip together several XComArgs
+        input_tuple=list_files_in_S3_one.output.zip(
+            list_files_in_S3_two.output,
+            query_snowflake.output,
             # fillvalue defines the entry in the zipped tuple in case one list
             # is shorter than the others
-            fillvalue="MISSING ENTRY"
+            fillvalue="MISSING ENTRY",
         )
     )
+
+
+dynamic_s3_snowflake_file_comparison()

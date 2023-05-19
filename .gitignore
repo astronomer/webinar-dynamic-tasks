@@ -3,4 +3,5 @@
 airflow_settings.yaml
 astro
 .DS_Store
-**__pycache__
+*__pycache__
+*.DS_Store
