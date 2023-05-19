@@ -1,25 +1,26 @@
-from airflow import DAG, AirflowException
-from airflow.operators.python import PythonOperator
-from airflow.decorators import task
-from datetime import datetime
+"""
+### Use the .zip method to combine XComArg/.output objects
 
-with DAG(
-    dag_id="zip_toy_example",
-    start_date=datetime(2022, 10, 1),
-    schedule=None,
-    catchup=False
-):
+This DAG shows a simple example of how you can use the .zip method of the XComArg object.
+"""
+
+from airflow.decorators import dag, task
+from pendulum import datetime
+
+
+@dag(start_date=datetime(2023, 5, 1), schedule=None, catchup=False)
+def zip_toy_example():
     # upstream task 1 returning a list
     @task
     def get_123():
         return [1, 2, 3]
 
     # upstream task 2 returning a list
-    @task 
+    @task
     def get_abcd():
-        return ["a","b","c","d"]
+        return ["a", "b", "c", "d"]
 
-    zipped_input = get_123().zip(get_abcd(), fillvalue= "MISSING")
+    zipped_input = get_123().zip(get_abcd(), fillvalue="MISSING")
 
     # optional: having a reducing task after the mapping task
     @task
@@ -33,4 +34,6 @@ with DAG(
             return num * letter
 
     multiply_letters.expand(zipped_input=zipped_input)
-    
+
+
+zip_toy_example()

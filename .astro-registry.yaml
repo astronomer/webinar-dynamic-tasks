@@ -1,0 +1,13 @@
+# These categories will be applied to all DAGs in the repo.
+categories:
+  - Airflow Fundamentals
+# List of DAGs that should be published to the Astronomer Registry.
+dags:
+  - path: dags/dynamic_s3_copy_sorting_file_contents.py
+  - path: dags/dynamic_s3_copy_source_dest_pairs.py
+  - path: dags/dynamic_s3_delete_skip_filetypes.py
+  - path: dags/dynamic_s3_file_parity_zip.py
+  - path: dags/dynamic_s3_snowflake_file_comparison.py
+  - path: dags/dynamic_task_mapping_multiple_parameters_1.py
+  - path: dags/map_and_reduce.py
+  - path: dags/skip_mapped_instances.py
